@@ -22,6 +22,23 @@
       const x=rect.x*width/bitmap.width,y=rect.y*height/bitmap.height,
        w=rect.w*width/bitmap.width,h=rect.h*height/bitmap.height;
       ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);}
+    if(active&&active.kind==='inventory'&&Array.isArray(active.entries)){
+      const crop=selected||{x:0,y:0,w:bitmap.width,h:bitmap.height};
+      const sx=width/bitmap.width,sy=height/bitmap.height;
+      for(const item of active.entries){
+        if(item.type!=='Meat'&&item.type!=='Lemon')continue;
+        const px=(crop.x+(item.x/W)*crop.w)*sx,py=(crop.y+(item.y/H)*crop.h)*sy,
+          pw=41/W*crop.w*sx,ph=43/H*crop.h*sy;
+        const color=item.type==='Meat'?'#e04f48':'#f8d32d';
+        ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.strokeRect(px,py,pw,ph);
+        ctx.font='bold 11px sans-serif';
+        const label=item.type;
+        const labelWidth=ctx.measureText(label).width+9;
+        ctx.fillStyle=color;ctx.fillRect(px,Math.max(0,py-14),labelWidth,14);
+        ctx.fillStyle=item.type==='Meat'?'#fff':'#392516';
+        ctx.fillText(label,px+4,Math.max(11,py-3));
+      }
+    }
   }
   const position = event => {
     const box=canvas.getBoundingClientRect();
@@ -145,16 +162,37 @@
   function numberInput(label,val,key){return '<label>'+label+'<input type="number" min="0" step="1" data-scan-field="'+key+'" value="'+(val==null?'':val)+'"></label>';}
   function inventoryPreview(scan) {
     const meat=scan.entries.filter(x=>x.type==='Meat'),lemon=scan.entries.filter(x=>x.type==='Lemon');
-    const cells=scan.entries.map((x,i)=>'<label>'+x.type+' · row '+x.row+', slot '+x.col+
-      '<input type="number" min="0" max="100" step="1" inputmode="numeric" data-stack="'+i+'" placeholder="Verify quantity" value="'+(x.quantity==null?'':x.quantity)+'"></label>').join('');
-    results.innerHTML='<p><strong>Inventory:</strong> '+meat.length+' meat stack(s), '+lemon.length+' lemon stack(s) recognized.</p>'+
-      '<p class="muted">Quantities can be misread. Check each stack, particularly the partial stacks. Blank means OCR was uncertain.</p>'+
+    const cells=scan.entries.map((x,i)=>'<div class="scan-stack"><label>Row '+x.row+', slot '+x.col+
+      '<select data-stack-type="'+i+'"><option value="Meat" '+(x.type==='Meat'?'selected':'')+'>Meat</option>'+
+      '<option value="Lemon" '+(x.type==='Lemon'?'selected':'')+'>Lemon</option>'+
+      '<option value="Ignore" '+(x.type==='Ignore'?'selected':'')+'>Ignore / incorrect match</option></select></label>'+
+      '<label>Stack quantity<input type="number" min="0" max="100" step="1" inputmode="numeric" data-stack="'+i+
+      '" placeholder="Verify quantity" value="'+(x.quantity==null?'':x.quantity)+'"></label></div>').join('');
+    const slots=Array.from({length:30},(_,i)=>'<option value="'+i+'">Row '+(Math.floor(i/5)+1)+', slot '+(i%5+1)+'</option>').join('');
+    results.innerHTML='<p><strong>Identified:</strong> Meat — '+meat.length+' stack(s); Lemon — '+lemon.length+' stack(s).</p>'+
+      '<p class="muted"><strong>Red outline = Meat. Yellow outline = Lemon.</strong> Labels are shown on the screenshot preview. Correct item identifiers or stack quantities below before applying.</p>'+
       '<div class="grid two">'+numberInput('Mesos',scan.mesos,'mesos')+'</div>'+
       '<div class="grid two">'+cells+'</div>'+
-      '<p id="scanTotals" class="muted"></p>';
+      '<p id="scanTotals" class="muted"></p>'+
+      '<div class="scan-manual"><p><strong>Missed an item?</strong> Label its inventory slot manually:</p>'+
+      '<div class="grid two"><label>Inventory slot<select id="scanMissedSlot">'+slots+'</select></label>'+
+      '<label>Item identifier<select id="scanMissedKind"><option value="Meat">Meat</option><option value="Lemon">Lemon</option></select></label></div>'+
+      '<button type="button" id="scanAddMissing">Mark this slot</button></div>';
     results.querySelectorAll('[data-stack]').forEach(input=>input.addEventListener('input',()=>{const v=input.value;
       scan.entries[Number(input.dataset.stack)].quantity=v===''?null:Number(v);renderTotals(scan);}));
+    results.querySelectorAll('[data-stack-type]').forEach(input=>input.addEventListener('change',()=>{
+      scan.entries[Number(input.dataset.stackType)].type=input.value;renderTotals(scan);draw();
+    }));
+    byId('scanAddMissing').onclick=()=>{
+      const slot=Number(byId('scanMissedSlot').value),row=Math.floor(slot/5),col=slot%5,
+        kind=byId('scanMissedKind').value,existing=scan.entries.find(e=>e.row===row+1&&e.col===col+1);
+      if(existing){existing.type=kind;existing.quantity=null;}
+      else scan.entries.push({type:kind,row:row+1,col:col+1,x:14+51*col,y:69+47*row,quantity:null,score:null});
+      inventoryPreview(scan);draw();
+      say('Slot '+(row+1)+','+(col+1)+' marked as '+kind+'. Enter its stack quantity.');
+    };
     renderTotals(scan);
+    draw();
   }
   function renderTotals(scan){
     const value=kind=>{const selected=scan.entries.filter(x=>x.type===kind);
