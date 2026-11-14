@@ -9,6 +9,7 @@
   const W = 295, H = 405, snapshotsKey = 'maple-inventory-snapshots-v1';
   let bitmap = null, selected = null, dragging = null, active = null, busy = false, ocrPromise = null;
   const reference = {Meat: decode('4ODY4NjYyMjA2NjQ4ODY4ODY4ODY4ODY4ODY4ODY4ODY4ODY2NjQmJiQkJCAgHhw4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQgHhwwLio6NjIYFhQcGBgYFBIYFBIoKCY2NjQ4NjQ4NjQ4NjQqJiAwLCQ2Mi4gFBIiDgwiDgweDAoUCgYiICA4NjQ4NjQ4NjQeHBoaFhIoFBQoEhIoEhImEBAmEA4iDgwWDgwsLCg4NjQ4NjQ4NjQyMC4SCggiDgwmEhAmEhImEhAmEA4kEAweDAwWDAogHhw2NjI4NjQeHhwYDAgcDAokEAwmEA4kEA4eDgwcDAoaDAgYCgYWCgYaGBY4NjQkIiAUCAQaDAggDgwkEA4cDAoYDAgaDAYiEAwkDgogDAgSCgYwLiw0NDISDgwWCgQcDAocDAoYDAggEgwsGBIsEg4oDAgmCgYUDAgwMC4iIiAsLCoGBAQQCAYYDAgUCAYeFBAkFA4sFhAuGBQgCgYcGho4NjQ'), Lemon: decode('6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ2NjIqKiYgHhYwLiw4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ2NDImJhYwMBA8OgAsJgIoJh44NjQ4NjQ4NjQ4NjQ4NjQ4NjQ0NDImJhY6Ohg+Phg+PgA+OgA0LgAoJhw4NjQ4NjQ4NjQ4NjQ4NjQiIhg6Oho+PjA+Pgg+PgA+PgA+OgAyKgAoKCQ4NjQ4NjQ4NjQyMjAkJAg+PjA+PiA+PgA+PgA+PAA+PAA+NAAgHAw4NjQ4NjQ4NjQyMC4mJgQ+Pig+Pgo+PgA+PgA+PgA+OgA+NAAgHAg4NjQ4NjQuLiw0NDAcHAo2Ng4+Pgg6OgA0NAA4NgA+NgA6MAAiIBg4NjQ4NjQ')};
+  const countReference = [{"item":"Meat","qty":54,"pattern":"2NjI4NjQaGBYWCAQaDAggDgwaDAgaDAgkFA4uFhIqDgomCgYaDAgwMC4yMC4sKigOCggUCAYaDAgWCgYoFhAwGhQqDgosEg4mCgYSDAoYGBgeHh4eHh4QEBAUDgoUDAgUEBAmCgYsEg4wIhw0KiQaDgokJCIiIiIODg4ODg4mJiQkJCIaGhoeHBooDgoqEAwqGhQ0MCo2NDAkIh4iIiIcHBwaHBwcHBweICAOEBAcHh4eEAwaCAQSCgYoJB42MiwwLCQcHBwsLCoaHBwQEhYWFhgYGhweICQMCAgWFhQkJCIaGBQwLCQeHBgeICISFhwSFhwYGhogIB4UFBQQEhgWFhYYGBgcHBoUEhAgHhYaGBg"},{"item":"Meat","qty":100,"pattern":"2NDI2NjQUEhAWCgYaDAogDgwaDAgaDAgmFhAuFhIoDAgmDAgWCgY2NDI0NDAsLCoOCAYUCgYaDAgYCgYmFhAsFhAqDgoqEgwkCgYUEA4mJiQcHBwgIB4cHBwcGhoUDAoUDAoeHBweGhgsIhwyKCIYDgooKCYSEhIiIiIQEBAYGBgaGBgUFBQaGhoaDgwcGBgcGhg2Miw0Mi4kIB4sKigaGhoOEBAeHhwiIiAUFBQaHBwaDAgYFhYQDg4sKCI2MiwuKiIuLioUGBoMDhAYGhoaHBoQEhQWGBwKCAYUFhgWFhYaGBQuKiIcGhYuLioOEhgSFBQSFhwQFhwQEhQSFBgQFhwSFhwUFBQUEg4eHBYeHhw"},{"item":"Lemon","qty":42,"pattern":"2NjI4NjQ4NjQiIBA+PiI+Phw+PgA+PgA+PgA+PAA+NgAkHgQ2NjI2NjI4NjQ4NjQkJBY8PA4+Phg+PgA+PgA+PgA+OAA+NAAkIAg2NjQ2NjI2NjIgIB4gIB4iIgoiIhYqKgg+PAA+PAA+NgA2LgAmJB44NjQ0NDIkJCImJiYcHBoaGhoYGBIeHhouKgI+NgA4LgAmJBY2NjQ4NjQkJCIUFhYaHBwcHBosLCoaGhQcHBguLAIuKAQiIBY2NDI4NjQ4NjQaGhweICImKiwWFhYmJiYaHB4eHhwYFgwkIh4wMC4wMC4yMi40NDIuLCooKCYSFhoQEBAWHCIOEhYSFBgUFBQaGhoeHBweHhwgHh4mJiQ"},{"item":"Lemon","qty":100,"pattern":"2NDI4NjQ2NjQgIAo+PiY+PhY+PgA+PgA+PgA+PAA+NAAiHAg2NjQ2NDI4NjQ2NjQiIhA8PBQ+PhA+PgA+PgA+PgA+OAA8MgAiHg42NjQsLCoeHh4oKCYcHBwgIBI2NgQwMAIiIhImJAw8NAAyKgAoKCQ4NjQWFhYmJiYSEhIaGhoaGhoaGhAeHhgeHhAeHhogHAYmJhw2NjQ4NjQkIiAaGhoOEBAeHhwiIiAUFBQaHBwsKgAiIBQaGho2NjQ4NjQ4NjQuLioWGBoMDhAcHBwgIB4SFBQWGhwSEAgWGBYcHBwwMC4yMjA0NDIuLioSFhwOEBISFhoSFhoOEBQSFBgSFhoSGBwUFBYeHhwgIB4oJiY"}].map(x=>({item:x.item,qty:x.qty,pattern:decode(x.pattern)}));
   function decode(s){ const b=atob(s), arr=new Uint8Array(b.length);for(let i=0;i<b.length;i++)arr[i]=b.charCodeAt(i);return arr; }
   function say(s){status.textContent=s;}
   function draw() {
@@ -61,6 +62,15 @@
     const p=c.getContext('2d').getImageData(0,0,13,10).data;
     return {meat:templateDistance(p,reference.Meat),lemon:templateDistance(p,reference.Lemon)};
   }
+  function countGuess(source,entry){
+    // Recognize exact pixel-font overlays seen in the sample. New values still fall back to OCR.
+    const c=document.createElement('canvas');c.width=13;c.height=7;
+    c.getContext('2d').drawImage(source,entry.x,entry.y+24,40,20,0,0,13,7);
+    const pixels=c.getContext('2d').getImageData(0,0,13,7).data;
+    const candidates=countReference.filter(x=>x.item===entry.type)
+      .map(x=>({qty:x.qty,error:templateDistance(pixels,x.pattern)})).sort((a,b)=>a.error-b.error);
+    return candidates.length&&candidates[0].error<18&&candidates[1].error-candidates[0].error>6?candidates[0].qty:null;
+  }
   function findItems(source){
     // Screenshot should contain the complete Use-tab inventory window, including top and bottom edges.
     const normalized=scale(source,W,H), entries=[];
@@ -68,7 +78,7 @@
       const x=14+51*col,y=69+47*row;
       const d=iconScores(normalized,x+4,y);
       const type=d.meat<23&&d.meat<d.lemon-9?'Meat':d.lemon<18&&d.lemon<d.meat-9?'Lemon':null;
-      if(type)entries.push({type,row:row+1,col:col+1,x,y,quantity:null,score:+(type==='Meat'?d.meat:d.lemon).toFixed(1)});
+      if(type){const entry={type,row:row+1,col:col+1,x,y,quantity:null,score:+(type==='Meat'?d.meat:d.lemon).toFixed(1)};entry.quantity=countGuess(normalized,entry);entries.push(entry);}
     }
     return {normalized,entries};
   }
@@ -143,7 +153,7 @@
     const snapshot={};
     for(const kind of ['Meat','Lemon']){
       const a=scan.entries.filter(x=>x.type===kind);
-      if(a.length&&a.every(x=>Number.isInteger(x.quantity)&&x.quantity>=0&&x.quantity<=100))
+      if(!a.length||a.every(x=>Number.isInteger(x.quantity)&&x.quantity>=0&&x.quantity<=100))
         snapshot[kind]=a.reduce((sum,x)=>sum+x.quantity,0);
     }
     const key=byId('scanTarget').value, saved=loadSnapshots();saved[key]=snapshot;
@@ -175,7 +185,7 @@
             const mesoText=await recognize(worker,mesoImage,{tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789,'});
             scan.mesos=parseMesos(mesoText);
             for(let i=0;i<scan.entries.length;i++){
-              const entry=scan.entries[i],count=take(scan.normalized,entry.x,entry.y+24,40,21,5);
+              const entry=scan.entries[i];if(entry.quantity!=null)continue;const count=take(scan.normalized,entry.x,entry.y+24,40,21,5);
               const txt=await recognize(worker,count,{tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789'});
               const digits=txt.replace(/[^0-9]/g,'');
               const value=digits?Number(digits):null;
