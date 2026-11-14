@@ -51,24 +51,39 @@
     const ct=c.getContext('2d');ct.imageSmoothingEnabled=true;ct.imageSmoothingQuality='high';
     ct.drawImage(source,x,y,w,h,0,0,c.width,c.height);return c;
   }
-  function templateDistance(slotPixels,template) {
-    let total=0;for(let i=0,j=0;j<template.length;i+=4,j+=3)
-      total+=Math.abs(slotPixels[i]-template[j])+Math.abs(slotPixels[i+1]-template[j+1])+Math.abs(slotPixels[i+2]-template[j+2]);
+  function downsampleBox(source,x,y,w,h,outW,outH) {
+    // Pixel-area averaging, not browser-dependent canvas smoothing.
+    // This matches the small icon/font reference tiles across browsers.
+    const src=source.getContext('2d').getImageData(x,y,w,h).data;
+    const result=new Uint8Array(outW*outH*3);
+    for(let oy=0;oy<outH;oy++)for(let ox=0;ox<outW;ox++){
+      const left=ox*w/outW,right=(ox+1)*w/outW,top=oy*h/outH,bottom=(oy+1)*h/outH;
+      let red=0,green=0,blue=0,area=0;
+      for(let py=Math.floor(top);py<Math.ceil(bottom);py++)
+        for(let px=Math.floor(left);px<Math.ceil(right);px++){
+          const weight=(Math.min(px+1,right)-Math.max(px,left))*(Math.min(py+1,bottom)-Math.max(py,top));
+          if(weight<=0)continue;
+          const i=(py*w+px)*4;red+=src[i]*weight;green+=src[i+1]*weight;blue+=src[i+2]*weight;area+=weight;
+        }
+      const k=(oy*outW+ox)*3;
+      result[k]=red/area;result[k+1]=green/area;result[k+2]=blue/area;
+    }
+    return result;
+  }
+  function templateDistance(pixels,template) {
+    let total=0;for(let i=0;i<template.length;i++)
+      total+=Math.abs(pixels[i]-template[i]);
     return total/template.length;
   }
   function iconScores(source,x,y) {
-    const c=document.createElement('canvas');c.width=13;c.height=10;
-    c.getContext('2d').drawImage(source,x,y,39,31,0,0,13,10);
-    const p=c.getContext('2d').getImageData(0,0,13,10).data;
+    const p=downsampleBox(source,x,y,39,31,13,10);
     return {meat:templateDistance(p,reference.Meat),lemon:templateDistance(p,reference.Lemon)};
   }
   function countGuess(source,entry){
-    // Recognize exact pixel-font overlays seen in the sample. New values still fall back to OCR.
-    const c=document.createElement('canvas');c.width=13;c.height=7;
-    c.getContext('2d').drawImage(source,entry.x,entry.y+24,40,20,0,0,13,7);
-    const pixels=c.getContext('2d').getImageData(0,0,13,7).data;
+    // Pixel-font samples from user-provided example; unseen values fall back to free OCR.
+    const p=downsampleBox(source,entry.x,entry.y+24,40,20,13,7);
     const candidates=countReference.filter(x=>x.item===entry.type)
-      .map(x=>({qty:x.qty,error:templateDistance(pixels,x.pattern)})).sort((a,b)=>a.error-b.error);
+      .map(x=>({qty:x.qty,error:templateDistance(p,x.pattern)})).sort((a,b)=>a.error-b.error);
     return candidates.length&&candidates[0].error<18&&candidates[1].error-candidates[0].error>6?candidates[0].qty:null;
   }
   function findItems(source){
