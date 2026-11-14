@@ -8,7 +8,8 @@
   const results = byId('scanResults'), apply = byId('scanApply');
   const W = 295, H = 405, snapshotsKey = 'maple-inventory-snapshots-v1';
   let bitmap = null, selected = null, dragging = null, active = null, busy = false, ocrPromise = null;
-  const reference = {Meat: decode('4ODY4NjYyMjA2NjQ4ODY4ODY4ODY4ODY4ODY4ODY4ODY4ODY2NjQmJiQkJCAgHhw4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQgHhwwLio6NjIYFhQcGBgYFBIYFBIoKCY2NjQ4NjQ4NjQ4NjQqJiAwLCQ2Mi4gFBIiDgwiDgweDAoUCgYiICA4NjQ4NjQ4NjQeHBoaFhIoFBQoEhIoEhImEBAmEA4iDgwWDgwsLCg4NjQ4NjQ4NjQyMC4SCggiDgwmEhAmEhImEhAmEA4kEAweDAwWDAogHhw2NjI4NjQeHhwYDAgcDAokEAwmEA4kEA4eDgwcDAoaDAgYCgYWCgYaGBY4NjQkIiAUCAQaDAggDgwkEA4cDAoYDAgaDAYiEAwkDgogDAgSCgYwLiw0NDISDgwWCgQcDAocDAoYDAggEgwsGBIsEg4oDAgmCgYUDAgwMC4iIiAsLCoGBAQQCAYYDAgUCAYeFBAkFA4sFhAuGBQgCgYcGho4NjQ'), Lemon: decode('6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ2NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ2NjIqKiYgHhYwLiw4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ4NjQ2NDImJhYwMBA8OgAsJgIoJh44NjQ4NjQ4NjQ4NjQ4NjQ4NjQ0NDImJhY6Ohg+Phg+PgA+OgA0LgAoJhw4NjQ4NjQ4NjQ4NjQ4NjQiIhg6Oho+PjA+Pgg+PgA+PgA+OgAyKgAoKCQ4NjQ4NjQ4NjQyMjAkJAg+PjA+PiA+PgA+PgA+PAA+PAA+NAAgHAw4NjQ4NjQ4NjQyMC4mJgQ+Pig+Pgo+PgA+PgA+PgA+OgA+NAAgHAg4NjQ4NjQuLiw0NDAcHAo2Ng4+Pgg6OgA0NAA4NgA+NgA6MAAiIBg4NjQ4NjQ')};
+  // Distinct Meat and Lemon sprite identifiers measured from the supplied screenshot (9×7 RGB).
+  const reference = {Meat: decode('4d/Yt7axwsC74d/Z4d/Z4d/Z4d/Z4d/Z4d/Zop6Wzse4kYp9l5CKl5GJ0M7F4d7U4d7V4d/Ul4p0yragkFtUjT81ezcuWDow1tTL4d/V4d/Vn52WdT03n0pGnklJnEc+ij0xcldQyMa94N/UgXZuazInkEA3mEU+hDsxcjQqYy8gWTYqxMK5mpOLVygYejYtfDcwajMjjEk0pEEwijQjgXZtm5qTPjErXCodVSodpVZAs1A8tVxHcy0fu7iv'), Lemon: decode('5eTg5eTg5eTg5eTg5eTg5eTg5eTg5eTg5eTg4d/V4d/U4d/U4d7U4d/V4d7U4d7U4d7V4d/U4d/V4d/V4N7Uvr2unZpgv7yt4N7U4d/V4d/V4d/V4N7UubiX1tZg/PoJ1b8KubSV4N7U4N/U4d/VvLqq1dVo//+C//8A//gA1LcJvLmq4N/U4d/Vo6Nh/v6o//8o//8A//cA/twApJde4d7V2tjOm5pu4eFT6OgI//8A/+4A9M4AqKB64N/V')};
   const countReference = [{"item":"Meat","qty":54,"pattern":"2NjI4NjQaGBYWCAQaDAggDgwaDAgaDAgkFA4uFhIqDgomCgYaDAgwMC4yMC4sKigOCggUCAYaDAgWCgYoFhAwGhQqDgosEg4mCgYSDAoYGBgeHh4eHh4QEBAUDgoUDAgUEBAmCgYsEg4wIhw0KiQaDgokJCIiIiIODg4ODg4mJiQkJCIaGhoeHBooDgoqEAwqGhQ0MCo2NDAkIh4iIiIcHBwaHBwcHBweICAOEBAcHh4eEAwaCAQSCgYoJB42MiwwLCQcHBwsLCoaHBwQEhYWFhgYGhweICQMCAgWFhQkJCIaGBQwLCQeHBgeICISFhwSFhwYGhogIB4UFBQQEhgWFhYYGBgcHBoUEhAgHhYaGBg"},{"item":"Meat","qty":100,"pattern":"2NDI2NjQUEhAWCgYaDAogDgwaDAgaDAgmFhAuFhIoDAgmDAgWCgY2NDI0NDAsLCoOCAYUCgYaDAgYCgYmFhAsFhAqDgoqEgwkCgYUEA4mJiQcHBwgIB4cHBwcGhoUDAoUDAoeHBweGhgsIhwyKCIYDgooKCYSEhIiIiIQEBAYGBgaGBgUFBQaGhoaDgwcGBgcGhg2Miw0Mi4kIB4sKigaGhoOEBAeHhwiIiAUFBQaHBwaDAgYFhYQDg4sKCI2MiwuKiIuLioUGBoMDhAYGhoaHBoQEhQWGBwKCAYUFhgWFhYaGBQuKiIcGhYuLioOEhgSFBQSFhwQFhwQEhQSFBgQFhwSFhwUFBQUEg4eHBYeHhw"},{"item":"Lemon","qty":42,"pattern":"2NjI4NjQ4NjQiIBA+PiI+Phw+PgA+PgA+PgA+PAA+NgAkHgQ2NjI2NjI4NjQ4NjQkJBY8PA4+Phg+PgA+PgA+PgA+OAA+NAAkIAg2NjQ2NjI2NjIgIB4gIB4iIgoiIhYqKgg+PAA+PAA+NgA2LgAmJB44NjQ0NDIkJCImJiYcHBoaGhoYGBIeHhouKgI+NgA4LgAmJBY2NjQ4NjQkJCIUFhYaHBwcHBosLCoaGhQcHBguLAIuKAQiIBY2NDI4NjQ4NjQaGhweICImKiwWFhYmJiYaHB4eHhwYFgwkIh4wMC4wMC4yMi40NDIuLCooKCYSFhoQEBAWHCIOEhYSFBgUFBQaGhoeHBweHhwgHh4mJiQ"},{"item":"Lemon","qty":100,"pattern":"2NDI4NjQ2NjQgIAo+PiY+PhY+PgA+PgA+PgA+PAA+NAAiHAg2NjQ2NDI4NjQ2NjQiIhA8PBQ+PhA+PgA+PgA+PgA+OAA8MgAiHg42NjQsLCoeHh4oKCYcHBwgIBI2NgQwMAIiIhImJAw8NAAyKgAoKCQ4NjQWFhYmJiYSEhIaGhoaGhoaGhAeHhgeHhAeHhogHAYmJhw2NjQ4NjQkIiAaGhoOEBAeHhwiIiAUFBQaHBwsKgAiIBQaGho2NjQ4NjQ4NjQuLioWGBoMDhAcHBwgIB4SFBQWGhwSEAgWGBYcHBwwMC4yMjA0NDIuLioSFhwOEBISFhoSFhoOEBQSFBgSFhoSGBwUFBYeHhwgIB4oJiY"}].map(x=>({item:x.item,qty:x.qty,pattern:decode(x.pattern)}));
   function decode(s){ const b=atob(s), arr=new Uint8Array(b.length);for(let i=0;i<b.length;i++)arr[i]=b.charCodeAt(i);return arr; }
   function say(s){status.textContent=s;}
@@ -77,7 +78,7 @@
     return total/template.length;
   }
   function iconScores(source,x,y) {
-    const p=downsampleBox(source,x,y,39,31,13,10);
+    const p=downsampleBox(source,x,y,39,31,9,7);
     return {meat:templateDistance(p,reference.Meat),lemon:templateDistance(p,reference.Lemon)};
   }
   function countGuess(source,entry){
@@ -93,7 +94,7 @@
     for(let row=0;row<6;row++)for(let col=0;col<5;col++){
       const x=14+51*col,y=69+47*row;
       const d=iconScores(normalized,x+4,y);
-      const type=d.meat<23&&d.meat<d.lemon-9?'Meat':d.lemon<18&&d.lemon<d.meat-9?'Lemon':null;
+      const type=d.meat<19&&d.meat<d.lemon-15?'Meat':d.lemon<17&&d.lemon<d.meat-15?'Lemon':null;
       if(type){const entry={type,row:row+1,col:col+1,x,y,quantity:null,score:+(type==='Meat'?d.meat:d.lemon).toFixed(1)};entry.quantity=countGuess(normalized,entry);entries.push(entry);}
     }
     return {normalized,entries};
