@@ -35,6 +35,7 @@
     selected=w>12&&h>12?{x,y,w,h}:null;dragging=null;draw();
     say(selected?'Crop selected. Press Read screenshot.':'Using the full screenshot.');});
   byId('scanResetCrop').onclick=()=>{selected=null;draw();say('Using the full image.');};
+  byId('scanClearComparisons').onclick=()=>{localStorage.removeItem(snapshotsKey);say('Saved inventory comparison counts cleared. Your farming history is unchanged.');};
   fileInput.onchange=async()=>{const f=fileInput.files&&fileInput.files[0];if(!f)return;
     try {if(bitmap&&bitmap.close)bitmap.close();bitmap=await createImageBitmap(f);selected=null;active=null;
       results.hidden=true;apply.hidden=true;canvas.hidden=false;draw();
@@ -219,7 +220,11 @@
           const enlarged=scale(input,input.width*3,input.height*3);
           const text=await recognize(worker,enlarged,{tessedit_pageseg_mode:'7',tessedit_char_whitelist:''});
           const exp=parseExp(text);scan.exp=exp.exp;scan.percent=exp.percent;
-          if(scan.exp==null&&scan.percent==null)scan.mesos=parseMesos(text);
+          if(scan.exp==null&&scan.percent==null){
+            const numberRegion=take(input,input.width*.56,input.height*.12,input.width*.29,input.height*.72,4);
+            const line=await recognize(worker,numberRegion,{tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789,'});
+            scan.mesos=parseMesos(line)||parseMesos(text);
+          }
         }finally{await worker.terminate();}
         barPreview(scan);results.hidden=false;apply.hidden=false;
         say('Bar recognized. Verify and apply the detected values.');
