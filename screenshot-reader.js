@@ -118,10 +118,24 @@
   }
   function parseExp(t){
     const s=t.replace(/\s+/g,' ').replace(/[oO](?=\d)/g,'0');
-    const pct=(s.match(/(\d{1,3}[.,]\d{1,2})\s*%/)||[])[1];
+    const pctMatch=s.match(/(?:^|[^\d])(\d{1,4}(?:[.,]\d{1,2})?)\s*%/);
+    let percent=null,correctedPercent=false;
+    if(pctMatch){
+      const value=Number(pctMatch[1].replace(',','.'));
+      if(value>=0&&value<=100) percent=value;
+      // On the Maple EXP bar, OCR sometimes mistakes the opening '[' as a '1':
+      // [58.16%] can be read as 158.16%. Never accept EXP percentages above 100%.
+      else if(pctMatch[1].startsWith('1')&&pctMatch[1].length>1){
+        const withoutBracket=Number(pctMatch[1].slice(1).replace(',','.'));
+        if(withoutBracket>=0&&withoutBracket<=100){
+          percent=withoutBracket;
+          correctedPercent=true;
+        }
+      }
+    }
     const match=s.match(/EXP\.?\s*[:.]?\s*(\d{1,3}(?:[,.]\d{3})+|\d{4,10})/i);
     const raw=match?Number(match[1].replace(/[,.]/g,'')):null;
-    return {exp:raw!=null&&Number.isFinite(raw)?raw:null,percent:pct?Number(pct.replace(',','.')):null};
+    return {exp:raw!=null&&Number.isFinite(raw)?raw:null,percent,correctedPercent};
   }
   function parseMesos(t) {
     const match=t.replace(/\s/g,'').match(/\d{1,3}(?:[, .]\d{3})+|\d{4,10}/);
@@ -219,7 +233,7 @@
         try{
           const enlarged=scale(input,input.width*3,input.height*3);
           const text=await recognize(worker,enlarged,{tessedit_pageseg_mode:'7',tessedit_char_whitelist:''});
-          const exp=parseExp(text);scan.exp=exp.exp;scan.percent=exp.percent;
+          const exp=parseExp(text);scan.exp=exp.exp;scan.percent=exp.percent;scan.correctedPercent=exp.correctedPercent;
           if(scan.exp==null&&scan.percent==null){
             const numberRegion=take(input,input.width*.56,input.height*.12,input.width*.29,input.height*.72,4);
             const line=await recognize(worker,numberRegion,{tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789,'});
@@ -227,7 +241,7 @@
           }
         }finally{await worker.terminate();}
         barPreview(scan);results.hidden=false;apply.hidden=false;
-        say('Bar recognized. Verify and apply the detected values.');
+        say(scan.correctedPercent?'The OCR mistook the opening bracket for 1. EXP % corrected to '+scan.percent+'%. Please verify before applying.':'Bar recognized. Verify and apply the detected values.');
       }else {
         say('Please crop closely to the EXP/mesos bar (wide and short) or to the entire inventory window (tall and narrow).');
       }
